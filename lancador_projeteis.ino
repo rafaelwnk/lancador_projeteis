@@ -32,7 +32,7 @@ void loop() {
   float distance = -1;
 
   if(digitalRead(servoButton) == LOW) {
-    servo.write(80);
+    servo.write(90);
     delay(180);
     distance = calculateDistance();
     servo.write(180);
