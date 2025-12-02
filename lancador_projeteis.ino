@@ -4,78 +4,74 @@
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSerif12pt7b.h>
 #include <Servo.h>
+#include <SoftwareSerial.h>
 
 Adafruit_SSD1306 display(-1);
 Servo servo;
 
-const int servoButton = 2;
-const int trig = 3;
-const int echo = 4;
-const int sensorButton = 7;
+const int servoButton = 3;
+const int trig = 4;
+const int echo = 5;
 
-const float initialOffset = 16.0;
+const float initialOffset = 5.50;
 
-void setup()
-{
+void setup() {
+  Serial.begin(9600);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
 
-  servo.attach(5);
+  servo.attach(6);
   servo.write(180);
   pinMode(servoButton, INPUT_PULLUP);
-  pinMode(sensorButton, INPUT_PULLUP);
   pinMode(trig, OUTPUT);
   pinMode(echo, INPUT);
 }
 
-void loop()
-{
+void loop() {
   display.clearDisplay();
 
-  float distance;
+  float distance = -1;
 
   if(digitalRead(servoButton) == LOW) {
-    launch();
-  }
-
-  if(digitalRead(sensorButton) == LOW) {
+    servo.write(80);
+    delay(180);
     distance = calculateDistance();
+    servo.write(180);
     showResults(distance);
   }
-}
 
-void launch() {
-  servo.write(90);
-  delay(1000);
-  servo.write(180);
-  delay(1000);
+   if (distance > 0 && distance < 4000) {
+      Serial.print("DIST:");
+      Serial.println(distance);
+  }
 }
 
 float calculateDistance() {
-  float sum = 0;
-  int validReadings = 0;
+  float distance = 9999;
+  unsigned long startTime = millis();
 
-  for (int i = 0; i < 5; i++) {
+  while(millis() - startTime < 2500) {
     long duration = 0;
 
     digitalWrite(trig, LOW);
     delayMicroseconds(2);
-    
     digitalWrite(trig, HIGH);
     delayMicroseconds(10);
     digitalWrite(trig, LOW);
-    
+
     duration = pulseIn(echo, HIGH, 25000);
 
-    if (duration > 50 && duration < 20000) {
-      float distance = duration * 0.034 / 2;
-      sum += distance;
-      validReadings++;
+    if (duration == 0) continue;
+
+    float d = (duration * 0.034) / 2.0;
+
+    if(d > 1 && d < distance) {
+      distance = d;
     }
   }
 
-  if (validReadings == 0) return -1;
+  if (distance == 9999) return -1;
 
-  return (sum / validReadings) + initialOffset;
+  return distance + initialOffset;
 }
 
 void showResults(float distance) {
